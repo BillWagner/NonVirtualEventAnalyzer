@@ -65,12 +65,21 @@ namespace NonVirtualEventAnalyzer
                 var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf()
                     .OfType<EventDeclarationSyntax>().First();
 
+                // We'll register two actions here.
                 // One will simply remove the virtual keyword.
+                // The second will remove the virtual keyword,
+                // and add a virtual method to raise the event.
                 context.RegisterCodeFix(
                     CodeAction.Create(
                         title: removeVirtualKeywordTitle,
                         createChangedDocument: c => RemoveVirtualEventPropertyAsync(context.Document, declaration, c),
                         equivalenceKey: removeVirtualKeywordTitle),
+                    diagnostic);
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        title: implementVirtualRaiseEvent,
+                        createChangedDocument: c => ImplementVirtualEventPropertyAsync(context.Document, declaration, c),
+                        equivalenceKey: implementVirtualRaiseEvent),
                     diagnostic);
             }
         }
@@ -108,6 +117,11 @@ namespace NonVirtualEventAnalyzer
             newRoot = newRoot.ReplaceNode(declaration, newDeclaration
                 .WithTrailingTrivia(TriviaList(CarriageReturnLineFeed, CarriageReturnLineFeed)));
             return document.WithSyntaxRoot(newRoot);
+        }
+
+        private Task<Document> ImplementVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
+        {
+            throw new NotImplementedException();
         }
 
         private static async Task<Document> RemoveVirtualTokenAsync(Document document, SyntaxToken virtualToken, CancellationToken c)
