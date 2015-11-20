@@ -18,7 +18,8 @@ namespace NonVirtualEventAnalyzer
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(NonVirtualEventAnalyzerCodeFixProvider)), Shared]
     public class NonVirtualEventAnalyzerCodeFixProvider : CodeFixProvider
     {
-        private const string title = "Remove virtual keyword";
+        private const string removeVirtualKeywordTitle = "Remove virtual keyword";
+        private const string implementVirtualRaiseEvent = "Implement Virtual Method to Raise Event";
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(NonVirtualEventAnalyzerAnalyzer.FieldEventDiagnosticId, NonVirtualEventAnalyzerAnalyzer.PropertyEventDiagnosticId);
 
@@ -40,12 +41,21 @@ namespace NonVirtualEventAnalyzer
                 var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf()
                     .OfType<EventFieldDeclarationSyntax>().First();
 
+                // We'll register two actions here.
                 // One will simply remove the virtual keyword.
+                // The second will remove the virtual keyword,
+                // and add a virtual method to raise the event.
                 context.RegisterCodeFix(
                     CodeAction.Create(
-                        title: title,
+                        title: removeVirtualKeywordTitle,
                         createChangedDocument: c => RemoveVirtualEventFieldAsync(context.Document, declaration, c),
-                        equivalenceKey: title),
+                        equivalenceKey: removeVirtualKeywordTitle),
+                    diagnostic);
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        title: implementVirtualRaiseEvent,
+                        createChangedDocument: c => ImplementVirtualRaiseEventFieldAsync(context.Document, declaration, c),
+                        equivalenceKey: implementVirtualRaiseEvent),
                     diagnostic);
             }
             else if (diagnostic.Id == NonVirtualEventAnalyzerAnalyzer.PropertyEventDiagnosticId)
@@ -56,9 +66,9 @@ namespace NonVirtualEventAnalyzer
                 // One will simply remove the virtual keyword.
                 context.RegisterCodeFix(
                     CodeAction.Create(
-                        title: title,
+                        title: removeVirtualKeywordTitle,
                         createChangedDocument: c => RemoveVirtualEventPropertyAsync(context.Document, declaration, c),
-                        equivalenceKey: title),
+                        equivalenceKey: removeVirtualKeywordTitle),
                     diagnostic);
             }
         }
@@ -75,6 +85,11 @@ namespace NonVirtualEventAnalyzer
             var modifiers = declaration.Modifiers;
             var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
             return RemoveVirtualTokenAsync(document, virtualToken, c);
+        }
+
+        private Task<Document> ImplementVirtualRaiseEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
+        {
+            throw new NotImplementedException();
         }
 
         private static async Task<Document> RemoveVirtualTokenAsync(Document document, SyntaxToken virtualToken, CancellationToken c)
