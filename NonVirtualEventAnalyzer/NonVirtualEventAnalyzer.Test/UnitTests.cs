@@ -100,6 +100,96 @@ namespace NonVirtualEventAnalyzer.Test
             VerifyCSharpFix(test, fixtest);
         }
 
+        [TestMethod]
+        public void AddVirtualRaiseEventMethodForFieldLikeEvents()
+        {
+            const string test = @"namespace VirtualEventTestCode
+{
+    public class Driver
+    {
+        public virtual event EventHandler<EventArgs> OnVirtualEvent;
+    }
+}";
+            var expected = new DiagnosticResult
+            {
+                Id = "NonVirtualFieldEvent",
+                Message = "Event 'OnVirtualEvent' should not be virtual",
+                Severity = DiagnosticSeverity.Warning,
+                Locations =
+                    new[] {
+                            new DiagnosticResultLocation("Test0.cs", 5, 54)
+                        }
+            };
+
+            VerifyCSharpDiagnostic(test, expected);
+
+            const string fixtest = @"namespace VirtualEventTestCode
+{
+    public class Driver
+    {
+        public event EventHandler<EventArgs> OnVirtualEvent;
+
+        protected virtual EventArgs RaiseVirtualEvent(EventArgs args)
+        {
+            OnVirtualEvent?.Invoke(this, args);
+            return args;
+        }
+    }
+}";
+            VerifyCSharpFix(test, fixtest, 1);
+        }
+
+        [TestMethod]
+        public void AddVirtualRaiseEventMethodForPropertyLikeEvent()
+        {
+            const string test = @"namespace VirtualEventTestCode
+{
+    public class Driver
+    {
+        protected event EventHandler<EventArgs> eventField;
+
+        public virtual event EventHandler<EventArgs> OnVirtualEvent
+        {
+            add { eventField += value; }
+            remove { eventField -= value; }
+        }
+    }
+}";
+            var expected = new DiagnosticResult
+            {
+                Id = "NonVirtualPropertyEvent",
+                Message = "Event 'OnVirtualEvent' should not be virtual",
+                Severity = DiagnosticSeverity.Warning,
+                Locations =
+                    new[] {
+                            new DiagnosticResultLocation("Test0.cs", 7, 54)
+                        }
+            };
+
+            VerifyCSharpDiagnostic(test, expected);
+
+            const string fixtest = @"namespace VirtualEventTestCode
+{
+    public class Driver
+    {
+        protected event EventHandler<EventArgs> eventField;
+
+        public event EventHandler<EventArgs> OnVirtualEvent
+        {
+            add { eventField += value; }
+            remove { eventField -= value; }
+        }
+
+        protected virtual EventArgs RaiseVirtualEvent(EventArgs args)
+        {
+            eventField?.Invoke(this, args);
+            return args;
+        }
+    }
+}";
+            VerifyCSharpFix(test, fixtest, 1);
+        }
+
         protected override CodeFixProvider GetCSharpCodeFixProvider()
         {
             return new NonVirtualEventAnalyzerCodeFixProvider();
