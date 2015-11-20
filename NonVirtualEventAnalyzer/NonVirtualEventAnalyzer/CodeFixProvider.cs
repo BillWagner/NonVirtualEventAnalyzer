@@ -63,41 +63,25 @@ namespace NonVirtualEventAnalyzer
             }
         }
 
-        private async Task<Document> RemoveVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
+        private Task<Document> RemoveVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
         {
             var modifiers = declaration.Modifiers;
             var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
-            var root = await document.GetSyntaxRootAsync(c);
-            var newRoot = root.ReplaceToken(virtualToken, SyntaxFactory.Token(SyntaxKind.None));
-            return document.WithSyntaxRoot(newRoot);
+            return RemoveVirtualTokenAsync(document, virtualToken, c);
         }
 
-        private async Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
+        private Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
         {
             var modifiers = declaration.Modifiers;
             var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
+            return RemoveVirtualTokenAsync(document, virtualToken, c);
+        }
+
+        private static async Task<Document> RemoveVirtualTokenAsync(Document document, SyntaxToken virtualToken, CancellationToken c)
+        {
             var root = await document.GetSyntaxRootAsync(c);
             var newRoot = root.ReplaceToken(virtualToken, SyntaxFactory.Token(SyntaxKind.None));
             return document.WithSyntaxRoot(newRoot);
-        }
-
-        private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
-        {
-            // Compute new uppercase name.
-            var identifierToken = typeDecl.Identifier;
-            var newName = identifierToken.Text.ToUpperInvariant();
-
-            // Get the symbol representing the type to be renamed.
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
-
-            // Produce a new solution that has all references to that type renamed, including the declaration.
-            var originalSolution = document.Project.Solution;
-            var optionSet = originalSolution.Workspace.Options;
-            var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
-
-            // Return the new solution with the now-uppercase type name.
-            return newSolution;
         }
     }
 }
