@@ -29,8 +29,14 @@ namespace NonVirtualEventAnalyzer
 
         public override void Initialize(AnalysisContext context)
         {
-            // TODO: Consider registering other actions that act on syntax instead of or in addition to symbols
-            context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.NamedType);
+            context.RegisterSyntaxNodeAction(AnalyzeEventDeclaration,
+                SyntaxKind.EventDeclaration,
+                SyntaxKind.EventFieldDeclaration);
+        }
+
+        private void AnalyzeEventDeclaration(SyntaxNodeAnalysisContext obj)
+        {
+            throw new NotImplementedException();
         }
 
         private static void AnalyzeSymbol(SymbolAnalysisContext context)
