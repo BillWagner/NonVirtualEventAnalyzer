@@ -18,7 +18,7 @@ namespace NonVirtualEventAnalyzer
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(NonVirtualEventAnalyzerCodeFixProvider)), Shared]
     public class NonVirtualEventAnalyzerCodeFixProvider : CodeFixProvider
     {
-        private const string title = "Make uppercase";
+        private const string title = "Remove virtual keyword";
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(NonVirtualEventAnalyzerAnalyzer.FieldEventDiagnosticId, NonVirtualEventAnalyzerAnalyzer.PropertyEventDiagnosticId);
 
@@ -31,20 +31,28 @@ namespace NonVirtualEventAnalyzer
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each fix to suggest
             var diagnostic = context.Diagnostics.First();
             var diagnosticSpan = diagnostic.Location.SourceSpan;
 
             // Find the type declaration identified by the diagnostic.
-            var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<TypeDeclarationSyntax>().First();
+            if (diagnostic.Id == NonVirtualEventAnalyzerAnalyzer.FieldEventDiagnosticId)
+            {
+                var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf()
+                    .OfType<EventFieldDeclarationSyntax>().First();
 
-            // Register a code action that will invoke the fix.
-            context.RegisterCodeFix(
-                CodeAction.Create(
-                    title: title,
-                    createChangedSolution: c => MakeUppercaseAsync(context.Document, declaration, c),
-                    equivalenceKey: title),
-                diagnostic);
+                // One will simply remove the virtual keyword.
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        title: title,
+                        createChangedDocument: c => RemoveVirtualEventFieldAsync(context.Document, declaration, c),
+                        equivalenceKey: title),
+                    diagnostic);
+            }
+        }
+
+        private Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
+        {
+            throw new NotImplementedException();
         }
 
         private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
