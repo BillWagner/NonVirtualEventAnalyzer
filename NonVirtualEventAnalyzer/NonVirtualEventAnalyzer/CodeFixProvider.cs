@@ -20,10 +20,7 @@ namespace NonVirtualEventAnalyzer
     {
         private const string title = "Make uppercase";
 
-        public sealed override ImmutableArray<string> FixableDiagnosticIds
-        {
-            get { return ImmutableArray.Create(NonVirtualEventAnalyzerAnalyzer.DiagnosticId); }
-        }
+        public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(NonVirtualEventAnalyzerAnalyzer.FieldEventDiagnosticId, NonVirtualEventAnalyzerAnalyzer.PropertyEventDiagnosticId);
 
         public sealed override FixAllProvider GetFixAllProvider()
         {
