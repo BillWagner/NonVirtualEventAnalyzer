@@ -119,9 +119,31 @@ namespace NonVirtualEventAnalyzer
             return document.WithSyntaxRoot(newRoot);
         }
 
-        private Task<Document> ImplementVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
+        private async Task<Document> ImplementVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
         {
-            throw new NotImplementedException();
+            // Need the left (IdentifierNameSyntax) of the Accessor Statement for the AssignmentExpressionSyntax
+            var accessor = declaration.AccessorList.Accessors.First();
+            var statements = accessor.Body.Statements.OfType<ExpressionStatementSyntax>();
+            // Need to fine where the right side of an Add statement is "value":
+            var eventFieldName = statements.Where(s => (s.Expression as AssignmentExpressionSyntax)?.OperatorToken.Kind() == SyntaxKind.PlusEqualsToken)
+                .Where(s => ((s.Expression as AssignmentExpressionSyntax)?.Right as IdentifierNameSyntax)?.Identifier.ValueText == "value")
+                .Select(s => ((s.Expression as AssignmentExpressionSyntax)?.Left as IdentifierNameSyntax)?.Identifier.ValueText).First();
+
+            var raiseMethod = CreateRaiseMethod(declaration.Identifier.ValueText, eventFieldName, (declaration.Type as GenericNameSyntax));
+
+            var root = await document.GetSyntaxRootAsync(c);
+            var newRoot = root.InsertNodesAfter(declaration, new SyntaxNode[] { raiseMethod });
+            // Note that we need to find the node again
+            declaration = newRoot.FindToken(declaration.Span.Start).Parent.AncestorsAndSelf()
+                .OfType<EventDeclarationSyntax>().First();
+
+            var modifiers = declaration.Modifiers;
+            var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
+
+            var newDeclaration = declaration.ReplaceToken(virtualToken, Token(SyntaxKind.None));
+            newRoot = newRoot.ReplaceNode(declaration, newDeclaration
+                .WithTrailingTrivia(TriviaList(CarriageReturnLineFeed, CarriageReturnLineFeed)));
+            return document.WithSyntaxRoot(newRoot);
         }
 
         private static async Task<Document> RemoveVirtualTokenAsync(Document document, SyntaxToken virtualToken, CancellationToken c)
