@@ -50,9 +50,13 @@ namespace NonVirtualEventAnalyzer
             }
         }
 
-        private Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
+        private async Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
         {
-            throw new NotImplementedException();
+            var modifiers = declaration.Modifiers;
+            var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
+            var root = await document.GetSyntaxRootAsync(c);
+            var newRoot = root.ReplaceToken(virtualToken, SyntaxFactory.Token(SyntaxKind.None));
+            return document.WithSyntaxRoot(newRoot);
         }
 
         private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
