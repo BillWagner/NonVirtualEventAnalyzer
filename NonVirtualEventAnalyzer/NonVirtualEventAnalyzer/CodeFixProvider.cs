@@ -48,6 +48,28 @@ namespace NonVirtualEventAnalyzer
                         equivalenceKey: title),
                     diagnostic);
             }
+            else if (diagnostic.Id == NonVirtualEventAnalyzerAnalyzer.PropertyEventDiagnosticId)
+            {
+                var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf()
+                    .OfType<EventDeclarationSyntax>().First();
+
+                // One will simply remove the virtual keyword.
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        title: title,
+                        createChangedDocument: c => RemoveVirtualEventPropertyAsync(context.Document, declaration, c),
+                        equivalenceKey: title),
+                    diagnostic);
+            }
+        }
+
+        private async Task<Document> RemoveVirtualEventPropertyAsync(Document document, EventDeclarationSyntax declaration, CancellationToken c)
+        {
+            var modifiers = declaration.Modifiers;
+            var virtualToken = modifiers.Single(m => m.Kind() == SyntaxKind.VirtualKeyword);
+            var root = await document.GetSyntaxRootAsync(c);
+            var newRoot = root.ReplaceToken(virtualToken, SyntaxFactory.Token(SyntaxKind.None));
+            return document.WithSyntaxRoot(newRoot);
         }
 
         private async Task<Document> RemoveVirtualEventFieldAsync(Document document, EventFieldDeclarationSyntax declaration, CancellationToken c)
