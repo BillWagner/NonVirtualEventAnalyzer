@@ -13,8 +13,8 @@ namespace NonVirtualEventAnalyzer
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class NonVirtualEventAnalyzerAnalyzer : DiagnosticAnalyzer
     {
-        public const string FieldEventDiagnosticId = "MoreEffectiveAnalyzersItem24Field";
-        public const string PropertyEventDiagnosticId = "MoreEffectiveAnalyzersItem24Property";
+        public const string FieldEventDiagnosticId = "NonVirtualFieldEvent";
+        public const string PropertyEventDiagnosticId = "NonVirtualPropertyEvent";
 
         // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
         private static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.AnalyzerTitle), Resources.ResourceManager, typeof(Resources));
@@ -34,9 +34,36 @@ namespace NonVirtualEventAnalyzer
                 SyntaxKind.EventFieldDeclaration);
         }
 
-        private void AnalyzeEventDeclaration(SyntaxNodeAnalysisContext obj)
+        private void AnalyzeEventDeclaration(SyntaxNodeAnalysisContext eventDeclarationSyntaxContext)
         {
-            throw new NotImplementedException();
+            var n = eventDeclarationSyntaxContext.Node;
+            var modifiers = default(SyntaxTokenList);
+            var eventName = default(string);
+            var location = default(Location);
+            var descriptor = default(DiagnosticDescriptor);
+            if (n.Kind() == SyntaxKind.EventFieldDeclaration)
+            {
+                var eventNode = eventDeclarationSyntaxContext.Node as EventFieldDeclarationSyntax;
+                modifiers = eventNode.Modifiers;
+                var variable = eventNode.Declaration.Variables.Single();
+                eventName = variable.Identifier.ValueText;
+                location = variable.GetLocation();
+                descriptor = RuleField;
+            }
+            else if (n.Kind() == SyntaxKind.EventDeclaration)
+            {
+                var eventNode = eventDeclarationSyntaxContext.Node as EventDeclarationSyntax;
+                eventName = eventNode.Identifier.ValueText;
+                modifiers = eventNode.Modifiers;
+                location = eventNode.Identifier.GetLocation();
+                descriptor = RuleProperty;
+            }
+            var isVirtual = modifiers.Any(m => m.Kind() == SyntaxKind.VirtualKeyword);
+            if (isVirtual)
+            {
+                var diagnostic = Diagnostic.Create(descriptor, location, eventName);
+                eventDeclarationSyntaxContext.ReportDiagnostic(diagnostic);
+            }
         }
 
         private static void AnalyzeSymbol(SymbolAnalysisContext context)
